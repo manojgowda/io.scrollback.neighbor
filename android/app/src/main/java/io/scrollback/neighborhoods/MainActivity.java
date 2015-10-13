@@ -1,23 +1,33 @@
 package io.scrollback.neighborhoods;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.KeyEvent;
 
+import com.facebook.appevents.AppEventsLogger;
 import com.facebook.react.LifecycleState;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactRootView;
 import com.facebook.react.modules.core.DefaultHardwareBackBtnHandler;
 import com.facebook.react.shell.MainReactPackage;
 
+import com.oblador.vectoricons.VectorIconsPackage;
+
 public class MainActivity extends Activity implements DefaultHardwareBackBtnHandler {
 
     private ReactInstanceManager mReactInstanceManager;
     private ReactRootView mReactRootView;
 
+    private GoogleLoginPackage mGoogleLoginPackage;
+    private FacebookLoginPackage mFacebookLoginPackage;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mGoogleLoginPackage = new GoogleLoginPackage(this);
+        mFacebookLoginPackage = new FacebookLoginPackage(this);
 
         mReactRootView = new ReactRootView(this);
 
@@ -26,7 +36,10 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
                 .setBundleAssetName("index.android.bundle")
                 .setJSMainModuleName("index.android")
                 .addPackage(new MainReactPackage())
-                .addPackage(new HeyNeighborPackage())
+                .addPackage(new VectorIconsPackage())
+                .addPackage(new HeyNeighborPackage(this))
+                .addPackage(mGoogleLoginPackage)
+                .addPackage(mFacebookLoginPackage)
                 .setUseDeveloperSupport(BuildConfig.DEBUG)
                 .setInitialLifecycleState(LifecycleState.RESUMED)
                 .build();
@@ -54,7 +67,7 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
 
     @Override
     public void onBackPressed() {
-    if (mReactInstanceManager != null) {
+        if (mReactInstanceManager != null) {
             mReactInstanceManager.onBackPressed();
         } else {
             super.onBackPressed();
@@ -68,6 +81,8 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
         if (mReactInstanceManager != null) {
             mReactInstanceManager.onPause();
         }
+
+        AppEventsLogger.deactivateApp(this);
     }
 
     @Override
@@ -77,5 +92,15 @@ public class MainActivity extends Activity implements DefaultHardwareBackBtnHand
         if (mReactInstanceManager != null) {
             mReactInstanceManager.onResume(this);
         }
+
+        AppEventsLogger.activateApp(this);
+    }
+
+    @Override
+    public void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        mGoogleLoginPackage.handleActivityResult(requestCode, resultCode, data);
+        mFacebookLoginPackage.handleActivityResult(requestCode, resultCode, data);
     }
 }

@@ -1,57 +1,59 @@
 import React from "react-native";
 import Account from "../components/account";
-import store from "../../store/store";
+import controller from "./controller";
 
 const {
-    InteractionManager
+	InteractionManager
 } = React;
 
+@controller
 export default class AccountController extends React.Component {
-    constructor(props) {
-        super(props);
+	constructor(props) {
+		super(props);
 
-        this.state = {
-            user: "LOADING"
-        };
-    }
+		this.state = {
+			user: "loading"
+		};
+	}
 
-    componentDidMount() {
-        this._mounted = true;
+	componentDidMount() {
+		this._updateData();
 
-        setTimeout(() => this._onDataArrived(store.getUser()), 100);
-    }
+		this.handle("statechange", changes => {
+			const user = this.store.get("user");
 
-    componentWillUnmount() {
-        this._mounted = false;
-    }
+			if (changes.entities && changes.entities[user]) {
+				this._updateData();
+			}
+		});
+	}
 
-    _onDataArrived(user) {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({ user });
-            }
-        });
-    }
+	_updateData() {
+		InteractionManager.runAfterInteractions(() => {
+			if (this._mounted) {
+				this.setState({
+					user: this.store.getUser()
+				});
+			}
+		});
+	}
 
-    _onError() {
-        this.setState({
-            user: "FAILED"
-        });
-    }
+	_saveUser(user) {
+		this.dispatch("user", {
+			to: user.id,
+			user
+		});
 
-    _saveUser(user) {
-        store.setUser(user);
+		this.setState({ user });
+	}
 
-        this.setState({ user });
-    }
-
-    render() {
-        return (
-            <Account
-                {...this.props}
-                {...this.state}
-                saveUser={this._saveUser.bind(this)}
-            />
-        );
-    }
+	render() {
+		return (
+			<Account
+				{...this.props}
+				{...this.state}
+				saveUser={this._saveUser.bind(this)}
+			/>
+		);
+	}
 }

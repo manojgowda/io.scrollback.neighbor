@@ -1,61 +1,56 @@
 import React from "react-native";
 import NotificationCenter from "../components/notification-center";
-import store from "../../store/store";
+import controller from "./controller";
 
 const {
-    InteractionManager
+	InteractionManager
 } = React;
 
+@controller
 export default class NotificationCenterController extends React.Component {
-    constructor(props) {
-        super(props);
+	constructor(props) {
+		super(props);
 
-        this.state = {
-            data: [ "LOADING" ]
-        };
-    }
+		this.state = {
+			data: [ "loading" ]
+		};
+	}
 
-    componentDidMount() {
-        this._mounted = true;
+	componentDidMount() {
+		this._updateData();
 
-        setTimeout(() => this._onDataArrived(store.getNotes()), 0);
-    }
+		this.handle("statechange", changes => {
+			if (changes && changes.notes) {
+				this._updateData();
+			}
+		});
+	}
 
-    componentWillUnmount() {
-        this._mounted = false;
-    }
+	_dismissNote(note) {
+		this.dispatch("note", {
+			ref: note.ref,
+			noteType: note.noteType,
+			dismissTime: Date.now()
+		});
+	}
 
-    _onDataArrived(newData) {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({
-                    data: newData
-                });
-            }
-        });
-    }
+	_updateData() {
+		InteractionManager.runAfterInteractions(() => {
+			if (this._mounted) {
+				this.setState({
+					data: this.store.getNotes()
+				});
+			}
+		});
+	}
 
-    _onError() {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({
-                    data: [ "FAILED" ]
-                });
-            }
-        });
-    }
-
-    _refreshData() {
-
-    }
-
-    render() {
-        return (
-            <NotificationCenter
-                {...this.props}
-                {...this.state}
-                refreshData={this._refreshData.bind(this)}
-            />
-        );
-    }
+	render() {
+		return (
+			<NotificationCenter
+				{...this.props}
+				{...this.state}
+				dismissNote={this._dismissNote.bind(this)}
+			/>
+		);
+	}
 }

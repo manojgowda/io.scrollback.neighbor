@@ -1,63 +1,59 @@
 import React from "react-native";
 import Localities from "../components/localities";
-import store from "../../store/store";
+import controller from "./controller";
 
 const {
-    InteractionManager
+	InteractionManager
 } = React;
 
+@controller
 export default class LocalitiesController extends React.Component {
-    constructor(props) {
-        super(props);
+	constructor(props) {
+		super(props);
 
-        this.state = {
-            data: [ "LOADING" ]
-        };
-    }
+		this.state = {
+			data: [ "loading" ]
+		};
+	}
 
-    componentDidMount() {
-        this._mounted = true;
+	componentDidMount() {
+		this._updateData();
 
-        setTimeout(() => this._onDataArrived(store.getRelatedRooms()), 0);
-    }
+		this.handle("statechange", changes => {
+			const user = this.store.get("user");
 
-    componentWillUnmount() {
-        this._mounted = false;
-    }
+			if (changes.indexes && changes.indexes.userRooms && changes.indexes.userRooms[user]) {
+				this._updateData();
+			}
+		});
 
-    _onDataArrived(data) {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({ data });
-            }
-        });
-    }
+		InteractionManager.runAfterInteractions(() => {
+			this.emit("setstate", {
+				nav: { mode: "home" }
+			});
+		});
+	}
 
-    _onError() {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({
-                    data: [ "FAILED" ]
-                });
-            }
-        });
-    }
+	_updateData() {
+		InteractionManager.runAfterInteractions(() => {
+			if (this._mounted) {
+				this.setState({
+					data: this.store.getRelatedRooms()
+				});
+			}
+		});
+	}
 
-    _refreshData() {
-
-    }
-
-    render() {
-        return (
-            <Localities
-                {...this.props}
-                {...this.state}
-                refreshData={this._refreshData.bind(this)}
-            />
-        );
-    }
+	render() {
+		return (
+			<Localities
+				{...this.props}
+				{...this.state}
+			/>
+		);
+	}
 }
 
 LocalitiesController.propTypes = {
-    filter: React.PropTypes.string
+	filter: React.PropTypes.string
 };

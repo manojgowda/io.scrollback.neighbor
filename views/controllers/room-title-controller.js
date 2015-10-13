@@ -1,45 +1,50 @@
 import React from "react-native";
 import RoomTitle from "../components/room-title";
-import store from "../../store/store";
+import controller from "./controller";
 
 const {
-    InteractionManager
+	InteractionManager
 } = React;
 
+@controller
 export default class RoomTitleController extends React.Component {
-    constructor(props) {
-        super(props);
+	constructor(props) {
+		super(props);
 
-        const displayName = this.props.room.replace(/-+/g, " ").replace(/\w\S*/g, s => s.charAt(0).toUpperCase() + s.slice(1)).trim();
+		const displayName = this.props.room.replace(/-+/g, " ").replace(/\w\S*/g, s => s.charAt(0).toUpperCase() + s.slice(1)).trim();
 
-        this.state = {
-            room: { displayName }
-        };
-    }
+		this.state = {
+			room: { displayName }
+		};
+	}
 
-    componentDidMount() {
-        this._mounted = true;
+	componentDidMount() {
+		this._updateData();
 
-        setTimeout(() => this._onDataArrived(store.getRoomById(this.props.room)), 0);
-    }
+		this.handle("statechange", changes => {
+			if (changes.entities && changes.entities[this.props.room]) {
+				this._updateData();
+			}
+		});
+	}
 
-    componentWillUnmount() {
-        this._mounted = false;
-    }
+	_updateData() {
+		InteractionManager.runAfterInteractions(() => {
+			if (this._mounted) {
+				const room = this.store.getRoom(this.props.room);
 
-    _onDataArrived(room) {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({ room });
-            }
-        });
-    }
+				if (room.displayName) {
+					this.setState({ room });
+				}
+			}
+		});
+	}
 
-    render() {
-        return <RoomTitle {...this.state} />;
-    }
+	render() {
+		return <RoomTitle {...this.state} />;
+	}
 }
 
 RoomTitleController.propTypes = {
-    room: React.PropTypes.string.isRequired
+	room: React.PropTypes.string.isRequired
 };

@@ -1,63 +1,82 @@
 import React from "react-native";
 import Discussions from "../components/discussions";
-import store from "../../store/store";
+import controller from "./controller";
 
 const {
-    InteractionManager
+	InteractionManager
 } = React;
 
+@controller
 export default class DiscussionsController extends React.Component {
-    constructor(props) {
-        super(props);
+	constructor(props) {
+		super(props);
 
-        this.state = {
-            data: [ "LOADING" ]
-        };
-    }
+		this.state = {
+			data: [ "loading" ],
+			user: ""
+		};
+	}
 
-    componentDidMount() {
-        this._mounted = true;
+	componentDidMount() {
+		this._updateData();
 
-        setTimeout(() => this._onDataArrived(store.getThreads(this.props.room)), 0);
-    }
+		this.handle("statechange", changes => {
+			if (changes.threads && changes.threads[this.props.room] || changes.nav && changes.nav.threadRange) {
+				this._updateData();
+			}
+		});
 
-    componentWillUnmount() {
-        this._mounted = false;
-    }
+		InteractionManager.runAfterInteractions(() => {
+			this.emit("setstate", {
+				nav: {
+					room: this.props.room,
+					mode: "room"
+				}
+			});
+		});
+	}
 
-    _onDataArrived(data) {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({ data });
-            }
-        });
-    }
+	_updateData() {
+		InteractionManager.runAfterInteractions(() => {
+			if (this._mounted) {
+				const time = this.store.get("nav", "threadRange", "time");
+				const before = this.store.get("nav", "threadRange", "before");
+				const after = this.store.get("nav", "threadRange", "after");
 
-    _onError() {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({
-                    data: [ "FAILED" ]
-                });
-            }
-        });
-    }
+				const beforeData = this.store.getThreads(this.props.room, time, -before);
+				const afterData = this.store.getThreads(this.props.room, time, after);
 
-    _refreshData() {
+				afterData.splice(-1, 1);
 
-    }
+				this.setState({
+					data: beforeData.concat(afterData).reverse(),
+					user: this.store.get("user")
+				});
+			}
+		});
+	}
 
-    render() {
-        return (
-            <Discussions
-                {...this.props}
-                {...this.state}
-                refreshData={this._refreshData.bind(this)}
-            />
-        );
-    }
+	_onEndReached() {
+		this.emit("setstate", {
+			nav: {
+				threadRange: {
+					before: this.store.get("nav", "threadRange", "before") + 20
+				}
+			}
+		});
+	}
+
+	render() {
+		return (
+			<Discussions
+				{...this.props}
+				{...this.state}
+				onEndReached={this._onEndReached.bind(this)}
+			/>
+		);
+	}
 }
 
 DiscussionsController.propTypes = {
-    room: React.PropTypes.string.isRequired
+	room: React.PropTypes.string.isRequired
 };

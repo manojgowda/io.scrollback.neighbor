@@ -2,28 +2,25 @@ import React from "react-native";
 import Splash from "./splash";
 import Onboard from "./onboard";
 import Home from "./home";
+import userUtils from "../../lib/user-utils";
 
 export default class App extends React.Component {
-    render() {
-        const { user } = this.props;
+	render() {
+		const { user, initialRoute } = this.props;
 
-        if (user === "FAILED") {
-            return <Onboard />;
-        }
+		if (user === "loading") {
+			return <Splash />;
+		}
 
-        if (user && user.id) {
-            return <Home />;
-        }
+		if (user === "missing" || userUtils.isGuest(user)) {
+			return <Onboard initialRoute={initialRoute} />;
+		}
 
-        return <Splash />;
-    }
+		return <Home initialRoute={initialRoute} />;
+	}
 }
 
 App.propTypes = {
-    user: React.PropTypes.oneOfType([
-        React.PropTypes.oneOf([ "LOADING", "FAILED" ]),
-        React.PropTypes.shape({
-            id: React.PropTypes.string
-        })
-    ]).isRequired
+	user: React.PropTypes.string.isRequired,
+	initialRoute: React.PropTypes.object
 };

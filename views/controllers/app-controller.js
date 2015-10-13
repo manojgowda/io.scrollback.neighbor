@@ -1,41 +1,41 @@
 import React from "react-native";
 import App from "../components/app";
-import store from "../../store/store";
+import Linking from "../../modules/linking";
+import routes from "../utils/routes";
+import controller from "./controller";
 
+@controller
 export default class AppController extends React.Component {
-    constructor(props) {
-        super(props);
+	constructor(props) {
+		super(props);
 
-        this.state = {
-            user: "LOADING"
-        };
-    }
+		this.state = {
+			user: "loading",
+			initialRoute: null
+		};
+	}
 
-    componentDidMount() {
-        this._mounted = true;
+	componentWillMount() {
+		Linking.getInitialURL(url => {
+			if (url) {
+				this.setState({
+					initialRoute: routes.fromURL(url)
+				});
+			}
+		});
 
-        setTimeout(() => {
-            if (this._mounted) {
-                this._onDataArrived(store.getUser());
-            }
-        }, 500);
-    }
+		this.handle("statechange", changes => {
+			if (changes && changes.user) {
+				const user = this.store.get("user");
 
-    componentWillUnmount() {
-        this._mounted = false;
-    }
+				if (user !== this.state.user && this._mounted) {
+					this.setState({ user });
+				}
+			}
+		});
+	}
 
-    _onDataArrived(user) {
-        this.setState({ user });
-    }
-
-    _onError() {
-        this.setState({
-            user: "FAILED"
-        });
-    }
-
-    render() {
-        return <App {...this.props} {...this.state} />;
-    }
+	render() {
+		return <App {...this.props} {...this.state} />;
+	}
 }

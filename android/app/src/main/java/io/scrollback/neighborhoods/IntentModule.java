@@ -1,5 +1,7 @@
 package io.scrollback.neighborhoods;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -10,12 +12,15 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 
 public class IntentModule extends ReactContextBaseJavaModule {
+
     ReactApplicationContext mReactContext;
+    Context mActivityContext;
 
-    public IntentModule(ReactApplicationContext ctx) {
-        super(ctx);
+    public IntentModule(ReactApplicationContext reactContext, Context activityContext) {
+        super(reactContext);
 
-        mReactContext = ctx;
+        mReactContext = reactContext;
+        mActivityContext = activityContext;
     }
 
     @Override
@@ -24,12 +29,24 @@ public class IntentModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void getInitialURL(final Callback callback) {
+        Intent intent = ((Activity) mActivityContext).getIntent();
+
+        String action = intent.getAction();
+        Uri uri = intent.getData();
+
+        if (Intent.ACTION_VIEW.equals(action) && uri != null) {
+            callback.invoke(uri.toString());
+        } else {
+            callback.invoke();
+        }
+    }
+
+    @ReactMethod
     public void openURL(final String url) {
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
 
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        mReactContext.startActivity(intent);
+        mActivityContext.startActivity(intent);
     }
 
     @ReactMethod

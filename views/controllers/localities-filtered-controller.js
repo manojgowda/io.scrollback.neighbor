@@ -1,108 +1,82 @@
 import React from "react-native";
 import LocalitiesFiltered from "../components/localities-filtered";
 import debounce from "../../lib/debounce";
-import store from "../../store/store";
+import controller from "./controller";
 
 const {
-    InteractionManager
+	InteractionManager
 } = React;
 
+@controller
 export default class LocalitiesFilterController extends React.Component {
-    constructor(props) {
-        super(props);
+	constructor(props) {
+		super(props);
 
-        this.state = {
-            data: []
-        };
+		this.state = {
+			data: []
+		};
 
-        this._fetchMatchingRooms = debounce(this._fetchMatchingRoomsImmediate.bind(this));
+		this._fetchMatchingRooms = debounce(this._fetchMatchingRoomsImmediate.bind(this));
 
-        this._cachedResults = {};
-    }
+		this._cachedResults = {};
+	}
 
-    componentDidMount() {
-        this._mounted = true;
-    }
+	_fetchMatchingRoomsImmediate(filter) {
+		this.query("getRooms", { ref: filter + "*" }).then(res => {
+			const data = res.results || [];
 
-    componentWillUnmount() {
-        this._mounted = false;
-    }
+			this._cachedResults[filter] = data;
 
-    _fetchMatchingRoomsImmediate(filter) {
-        setTimeout(() => {
-            const data = store.getAllRooms().filter(room => {
-                return (
-                    room.id.toLowerCase().indexOf(filter) === 0 ||
-                    room.displayName.toLowerCase().indexOf(filter) === 0
-                );
-            }).slice(0, 10);
+			if (filter !== this.state.filter) {
+				return;
+			}
 
-            this._cachedResults[filter] = data;
+			this._onDataArrived(data);
+		});
+	}
 
-            if (filter !== this.state.filter) {
-                return;
-            }
+	_onDataArrived(data) {
+		this.setState({ data });
+	}
 
-            this._onDataArrived(data);
-        }, 500);
-    }
+	_onSearchChange(filter) {
+		if (filter) {
+			InteractionManager.runAfterInteractions(() => {
+				if (this._mounted) {
+					if (this._cachedResults[filter]) {
+						this.setState({
+							filter,
+							data: this._cachedResults[filter]
+						});
+					} else {
+						this.setState({
+							filter,
+							data: [ "loading" ]
+						});
+					}
+				}
+			});
 
-    _onDataArrived(data) {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({ data });
-            }
-        });
-    }
+			this._fetchMatchingRooms(filter);
+		} else {
+			this.setState({
+				filter,
+				data: []
+			});
+		}
+	}
 
-    _onSearchChange(filter) {
-        if (filter) {
-            InteractionManager.runAfterInteractions(() => {
-                if (this._mounted) {
-                    if (this._cachedResults[filter]) {
-                        this.setState({
-                            filter,
-                            data: this._cachedResults[filter]
-                        });
-                    } else {
-                        this.setState({
-                            filter,
-                            data: [ "LOADING" ]
-                        });
-                    }
-                }
-            });
-
-            this._fetchMatchingRooms(filter);
-        } else {
-            this.setState({
-                filter,
-                data: []
-            });
-        }
-    }
-
-    _onError() {
-        InteractionManager.runAfterInteractions(() => {
-            if (this._mounted) {
-                this.setState({
-                    data: [ "FAILED" ]
-                });
-            }
-        });
-    }
-
-    render() {
-        return (
-            <LocalitiesFiltered
-                {...this.props}
-                {...this.state}
-                onSearchChange={this._onSearchChange.bind(this)}
-            />
-        );
-    }
+	render() {
+		return (
+			<LocalitiesFiltered
+				{...this.props}
+				{...this.state}
+				onSearchChange={this._onSearchChange.bind(this)}
+			/>
+		);
+	}
 }
 
 LocalitiesFilterController.propTypes = {
-    filter: React.PropTypes.string
+	filter: React.PropTypes.string
 };
